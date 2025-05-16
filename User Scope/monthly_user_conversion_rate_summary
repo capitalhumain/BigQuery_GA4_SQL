@@ -1,0 +1,35 @@
+-- Declare date range variables to filter data for the year 2024
+DECLARE start_date STRING DEFAULT '2024-01-01';
+DECLARE end_date STRING DEFAULT '2024-12-31';
+
+WITH converted_users AS (
+  -- Calculating the monthly count of converted users
+  SELECT
+    DATE_TRUNC(PARSE_DATE('%Y%m%d', event_date), MONTH) AS conversion_month,
+    COUNT(DISTINCT user_pseudo_id) AS converted_user_count
+  -- Replace with your own project and dataset ID
+  FROM `project.dataset.events_*`
+  WHERE event_name = 'purchase'
+    AND _TABLE_SUFFIX BETWEEN REPLACE(start_date, '-', '') AND REPLACE(end_date, '-', '')
+  GROUP BY conversion_month
+),
+
+total_users AS (
+  -- Calculating the monthly count of total users
+  SELECT
+    DATE_TRUNC(PARSE_DATE('%Y%m%d', event_date), MONTH) AS user_month,
+    COUNT(DISTINCT user_pseudo_id) AS total_user_count
+  -- Replace with your own project and dataset ID
+  FROM `project.dataset.events_*`
+  WHERE _TABLE_SUFFIX BETWEEN REPLACE(start_date, '-', '') AND REPLACE(end_date, '-', '')
+  GROUP BY user_month
+)
+
+-- Calculating the user conversion rate per month
+SELECT
+  cu.conversion_month AS month,
+  ROUND((cu.converted_user_count / tu.total_user_count) * 100, 2) AS user_conversion_rate
+FROM converted_users cu
+JOIN total_users tu
+  ON cu.conversion_month = tu.user_month
+ORDER BY cu.conversion_month;
